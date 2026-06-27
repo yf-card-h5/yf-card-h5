@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YF卡密自动发货</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 15px;
+        }
+        
+        .product-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .product-desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .product-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .product-price::before {
+            content: '¥';
+            font-size: 16px;
+        }
+        
+        .buy-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .buy-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 90%;
+            width: 350px;
+            text-align: center;
+        }
+        
+        .pay-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .pay-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .pay-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .pay-wechat {
+            background: #07c160;
+            color: white;
+        }
+        
+        .pay-alipay {
+            background: #1677ff;
+            color: white;
+        }
+        
+        .pay-icon {
+            font-size: 20px;
+        }
+        
+        .qrcode-container {
+            margin: 20px 0;
+        }
+        
+        .qrcode-container img {
+            width: 200px;
+            height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .qrcode-tip {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .confirm-pay-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .back-btn {
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎁 YF卡密自动发货</h1>
+            <p>自动发货 · 即时到账 · 24小时服务</p>
+        </div>
+        
+        <div class="product-card">
+            <div class="product-name">YF会员 - 天卡</div>
+            <div class="product-desc">✓ 即时发货 ✓ 自动获取 ✓ 24小时有效</div>
+            <div class="product-footer">
+                <div class="product-price">60<span style="font-size:14px;color:#999">/天</span></div>
+                <button class="buy-btn" onclick="buyProduct()">立即购买</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 支付方式选择 -->
+    <div class="modal" id="payModal">
+        <div class="modal-content">
+            <h2>选择支付方式</h2>
+            <p style="color:#666;margin-top:10px;">YF会员天卡 - ¥60</p>
+            <div class="pay-options">
+                <button class="pay-btn pay-wechat" onclick="showQRCode('wechat')">
+                    <span class="pay-icon">💬</span>
+                    <span>微信支付</span>
+                </button>
+                <button class="pay-btn pay-alipay" onclick="showQRCode('alipay')">
+                    <span class="pay-icon">🔷</span>
+                    <span>支付宝支付</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 微信二维码 -->
+    <div class="modal" id="wechatQRModal">
+        <div class="modal-content">
+            <h2>微信支付</h2>
+            <div class="qrcode-container">
+                <img id="wechatQR" src="" alt="微信收款码">
+            </div>
+            <p class="qrcode-tip">请使用微信扫码支付 ¥60</p>
+            <p class="qrcode-tip">支付完成后点击下方按钮</p>
+            <button class="confirm-pay-btn" onclick="confirmPay('wechat')">我已完成支付</button>
+            <button class="back-btn" onclick="backToPay()">返回</button>
+        </div>
+    </div>
+    
+    <!-- 支付宝二维码 -->
+    <div class="modal" id="alipayQRModal">
+        <div class="modal-content">
+            <h2>支付宝支付</h2>
+            <div class="qrcode-container">
+                <img id="alipayQR" src="" alt="支付宝收款码">
+            </div>
+            <p class="qrcode-tip">请使用支付宝扫码支付 ¥60</p>
+            <p class="qrcode-tip">支付完成后点击下方按钮</p>
+            <button class="confirm-pay-btn" onclick="confirmPay('alipay')">我已完成支付</button>
+            <button class="back-btn" onclick="backToPay()">返回</button>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        // 配置：收款码图片路径
+        const CONFIG = {
+            price: 60,
+            wechatQR: 'images/wechat.jpg', // 微信收款码图片路径
+            alipayQR: 'images/alipay.jpg', // 支付宝收款码图片路径
+            // API地址配置 - 使用相对路径或根据环境自动选择
+            apiBase: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? 'http://122.51.102.171:3001/api'
+                : 'https://yf-api-server.herokuapp.com/api' // 需要配置HTTPS代理
+        };
+        
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        function buyProduct() {
+            document.getElementById('payModal').classList.add('active');
+        }
+        
+        function showQRCode(type) {
+            document.getElementById('payModal').classList.remove('active');
+            
+            if (type === 'wechat') {
+                if (!CONFIG.wechatQR) {
+                    showToast('微信收款码未配置，请联系管理员');
+                    return;
+                }
+                document.getElementById('wechatQR').src = CONFIG.wechatQR;
+                document.getElementById('wechatQRModal').classList.add('active');
+            } else {
+                if (!CONFIG.alipayQR) {
+                    showToast('支付宝收款码未配置，请联系管理员');
+                    return;
+                }
+                document.getElementById('alipayQR').src = CONFIG.alipayQR;
+                document.getElementById('alipayQRModal').classList.add('active');
+            }
+        }
+        
+        function backToPay() {
+            document.getElementById('wechatQRModal').classList.remove('active');
+            document.getElementById('alipayQRModal').classList.remove('active');
+            document.getElementById('payModal').classList.add('active');
+        }
+        
+        async function confirmPay(payType) {
+            try {
+                document.getElementById('wechatQRModal').classList.remove('active');
+                document.getElementById('alipayQRModal').classList.remove('active');
+                
+                showToast('正在处理...');
+                
+                const res = await fetch(`${CONFIG.apiBase}/order/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productId: 'yf-vip-day',
+                        payType: payType,
+                        customerInfo: { from: 'h5' }
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.code === 0) {
+                    showToast('购买成功！卡密: ' + data.data.cardCode);
+                    
+                    // 显示卡密弹窗
+                    setTimeout(() => {
+                        alert(`🎉 购买成功！\n\n您的卡密是：${data.data.cardCode}\n\n请妥善保存，24小时内有效！`);
+                    }, 500);
+                    
+                    console.log('订单号:', data.data.orderId);
+                    console.log('卡密:', data.data.cardCode);
+                } else {
+                    showToast(data.msg || '购买失败');
+                }
+            } catch (err) {
+                showToast('网络错误: ' + err.message);
+                console.error('支付错误:', err);
+            }
+        }
+        
+        // 点击模态框外部关闭
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
